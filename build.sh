@@ -158,6 +158,8 @@ echo "Generating shortcuts... DONE"
 
 echo -ne "Copying Theme Index...\\r"
 [ -e "$OUTPUT/$INDEX" ] || cp $INDEX "$OUTPUT/index.theme"
+cp LICENSE "$OUTPUT/LICENSE"
+cp README.md "$OUTPUT/README.md"
 echo "Copying Theme Index... DONE"
 
 
