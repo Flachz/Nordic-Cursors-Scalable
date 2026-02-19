@@ -1,108 +1,100 @@
-#!/bin/bash
-# Open initial output.
-# Prefer konsole if its there, otherwise fall back to xterminal.
-#tty -s; if [ $? -ne 0 ]; then
-#	if command -v konsole &>/dev/null; then
-#		konsole -e "$0"; exit;
-#		else
-#		xterm -e "$0"; exit;
-#	fi
-#fi
+#!/usr/bin/env bash
+#
+# Build script to build Nordic Cursors Scalable Theme
 
-cd "$( dirname "${BASH_SOURCE[0]}" )" || exit
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit
+THREADS="${THREADS:=$(nproc)}"
 RAWSVG="src/cursors.svg"
 INDEX="src/index.theme"
 ALIASES="src/cursorList"
+METADATA="src/metadata"
+SVGS="src/svg"
 
 
 echo -ne "Checking Requirements...\\r"
-if [ ! -f $RAWSVG ] ; then
+if [ ! -f $RAWSVG ]; then
 	echo -e "\\nFAIL: '$RAWSVG' missing in /src"
 	exit 1
 fi
 
-if [ ! -f $INDEX ] ; then
+if [ ! -f $INDEX ]; then
 	echo -e "\\nFAIL: '$INDEX' missing in /src"
 	exit 1
 fi
 
-if  ! type "inkscape" > /dev/null ; then
+if  ! type "inkscape" > /dev/null; then
 	echo -e "\\nFAIL: inkscape must be installed"
 	exit 1
 fi
 
-if  ! type "xcursorgen" > /dev/null ; then
+if  ! type "xcursorgen" > /dev/null; then
 	echo -e "\\nFAIL: xcursorgen must be installed"
 	exit 1
 fi
-echo -e "Checking Requirements... DONE"
+echo "Checking Requirements... DONE"
 
 
 
-echo -ne "Making Folders... $BASENAME\\r"
-DIR2X="build/x2"
-DIR1_5X="build/x1_5"
-DIR1X="build/x1"
-OUTPUT="$(grep --only-matching --perl-regex "(?<=Name\=).*$" $INDEX)"
-OUTPUT=${OUTPUT// /_}
-mkdir -p "$DIR2X"
-mkdir -p "$DIR1_5X"
-mkdir -p "$DIR1X"
+echo -ne "Making Folders...\\r"
+RESOLUTIONS="$(seq -s ' ' 12 2 46) $(seq -s ' ' 48 6 72) $(seq -s ' ' 80 8 96)"
+PIXMAPS="build/pixmaps"
+OUTPUT="build/$(grep -oP "(?<=Name\=).*$" "$INDEX" | tr '[:upper:] ' '[:lower:]_')"
+
 mkdir -p "$OUTPUT/cursors"
+mkdir -p "$OUTPUT/cursors_scalable"
+
+for RES in $RESOLUTIONS; do
+	mkdir -p "$PIXMAPS/${RES}px"
+done
+
+for JSON in "$METADATA/"*.json; do
+	BASENAME="${JSON##*/}"
+	BASENAME="${BASENAME%.*}"
+	mkdir -p "$OUTPUT/cursors_scalable/$BASENAME"
+done
+
 echo 'Making Folders... DONE';
 
 
 
 for CUR in src/config/*.cursor; do
-	BASENAME=$CUR
-	BASENAME=${BASENAME##*/}
-	BASENAME=${BASENAME%.*}
+	BASENAME="${CUR##*/}"
+	BASENAME="${BASENAME%.*}"
 
 	echo -ne "\033[0KGenerating simple cursor pixmaps... $BASENAME\\r"
 
-	if [ "$DIR1X/$BASENAME.png" -ot $RAWSVG ] ; then
-		inkscape -i "$BASENAME" -d 90 $RAWSVG --export-background-opacity=0  --export-filename="$DIR1X/$BASENAME.png" > /dev/null
-	fi
-
-	if [ "$DIR1_5X/$BASENAME.png" -ot $RAWSVG ] ; then
-		inkscape -i "$BASENAME" -d 135 $RAWSVG --export-background-opacity=0  --export-filename="$DIR1_5X/$BASENAME.png" > /dev/null
-	fi
-
-	if [ "$DIR2X/$BASENAME.png" -ot $RAWSVG ] ; then
-		inkscape -i "$BASENAME" -d 180 $RAWSVG --export-background-opacity=0  --export-filename="$DIR2X/$BASENAME.png" > /dev/null
-	fi
+	for RES in $RESOLUTIONS; do
+		DPI=$((RES * 4))
+		[ "$(jobs -rp | wc -l)" -ge "$THREADS" ] && wait -n
+		[ "$PIXMAPS/${RES}px/$BASENAME.png" -ot $RAWSVG ] && \
+		unshare -U inkscape -i "$BASENAME" -d "$DPI" "$RAWSVG" \
+			--export-background-opacity=0  \
+			--export-filename="$PIXMAPS/${RES}px/$BASENAME.png" \
+			>/dev/null 2>&1 &
+	done
+	wait
 done
 echo -e "\033[0KGenerating simple cursor pixmaps... DONE"
 
 
 
-for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-do
+for i in $(seq -w 1 23); do
 	echo -ne "\033[0KGenerating animated cursor pixmaps... $i / 23 \\r"
 
-	if [ "$DIR1X/progress-$i.png" -ot $RAWSVG ] ; then
-		inkscape -i progress-$i -d 90 $RAWSVG --export-background-opacity=0  --export-filename="$DIR1X/progress-$i.png" > /dev/null
-	fi
-
-    if [ "$DIR1_5X/progress-$i.png" -ot $RAWSVG ] ; then
-        inkscape -i progress-$i -d 135 $RAWSVG --export-background-opacity=0  --export-filename="$DIR1_5X/progress-$i.png" > /dev/null
-	fi
-
-	if [ "$DIR2X/progress-$i.png" -ot $RAWSVG ] ; then
-		inkscape -i progress-$i -d 180 $RAWSVG --export-background-opacity=0  --export-filename="$DIR2X/progress-$i.png" > /dev/null
-	fi
-
-	if [ "$DIR1X/wait-$i.png" -ot $RAWSVG ] ; then
-		inkscape -i wait-$i -d 90  $RAWSVG --export-background-opacity=0  --export-filename="$DIR1X/wait-$i.png" > /dev/null
-	fi
-
-	if [ "$DIR1_5X/wait-$i.png" -ot $RAWSVG ] ; then
-		inkscape -i wait-$i -d 135  $RAWSVG --export-background-opacity=0  --export-filename="$DIR1_5X/wait-$i.png" > /dev/null
-	fi
-
-	if [ "$DIR2X/wait-$i.png" -ot $RAWSVG ] ; then
-		inkscape -i wait-$i -d 180 $RAWSVG --export-background-opacity=0  --export-filename="$DIR2X/wait-$i.png" > /dev/null
-	fi
+	for RES in $RESOLUTIONS; do
+		DPI=$((RES * 4))
+		for ANI in progress wait; do
+			[ "$(jobs -rp | wc -l)" -ge "$THREADS" ] && wait -n
+			[ "$PIXMAPS/${RES}px/$ANI-$i.png" -ot $RAWSVG ] && \
+			unshare -U inkscape -i "$ANI-$i" -d "$DPI" "$RAWSVG" \
+				--export-background-opacity=0  \
+				--export-filename="$PIXMAPS/${RES}px/$ANI-$i.png" \
+				>/dev/null 2>&1 &
+		done
+	done
+	wait
 done
 echo -e "\033[0KGenerating animated cursor pixmaps... DONE"
 
@@ -110,17 +102,43 @@ echo -e "\033[0KGenerating animated cursor pixmaps... DONE"
 
 echo -ne "Generating cursor theme...\\r"
 for CUR in src/config/*.cursor; do
-	BASENAME=$CUR
-	BASENAME=${BASENAME##*/}
-	BASENAME=${BASENAME%.*}
+	BASENAME="${CUR##*/}"
+	BASENAME="${BASENAME%.*}"
 
-	ERR="$( xcursorgen -p build "$CUR" "$OUTPUT/cursors/$BASENAME" 2>&1 )"
-
-	if [[ "$?" -ne "0" ]]; then
+	if ! ERR="$(xcursorgen -p "$PIXMAPS" "$CUR" "$OUTPUT/cursors/$BASENAME" 2>&1)"; then
 		echo "FAIL: $CUR $ERR"
+		exit 2
 	fi
 done
-echo -e "Generating cursor theme... DONE"
+echo "Generating cursor theme... DONE"
+
+
+
+echo -ne "Copying SVG metadata...\\r"
+for JSON in "$METADATA/"*.json; do
+	BASENAME="${JSON##*/}"
+	BASENAME="${BASENAME%.*}"
+	
+	cp "$JSON" "$OUTPUT/cursors_scalable/$BASENAME/metadata.json"
+done
+echo "Copying SVG metadata... DONE"
+
+
+
+echo -ne "Copying SVGs...\\r"
+for SVG in "$SVGS/"*.svg; do
+	BASENAME=${SVG##*/}
+	BASENAME="${BASENAME%.*}"
+	
+	if [[ "$BASENAME" =~ -[0-9]{2}$ ]]; then
+		DIRNAME="${BASENAME%-*}"
+	else
+		DIRNAME="$BASENAME"
+	fi
+	
+	cp "$SVG" "$OUTPUT/cursors_scalable/$DIRNAME/$BASENAME.svg"
+done
+echo "Copying SVGs... DONE"
 
 
 
@@ -129,22 +147,25 @@ while read -r ALIAS ; do
 	FROM=${ALIAS% *}
 	TO=${ALIAS#* }
 
-	if [ -e "$OUTPUT/cursors/$FROM" ] ; then
-		continue
-	fi
+	[ -e "$OUTPUT/cursors/$FROM" ] && continue
 
 	ln -s "$TO" "$OUTPUT/cursors/$FROM"
+	ln -s "$TO" "$OUTPUT/cursors_scalable/$FROM"
 done < $ALIASES
-echo -e "\033[0KGenerating shortcuts... DONE"
+echo "Generating shortcuts... DONE"
 
 
 
 echo -ne "Copying Theme Index...\\r"
-	if ! [ -e "$OUTPUT/$INDEX" ] ; then
-		cp $INDEX "$OUTPUT/index.theme"
-	fi
-echo -e "\033[0KCopying Theme Index... DONE"
+[ -e "$OUTPUT/$INDEX" ] || cp $INDEX "$OUTPUT/index.theme"
+echo "Copying Theme Index... DONE"
 
+
+
+echo -ne "Compressing to tarball...\\r"
+BASENAME=${OUTPUT##*/}
+tar -cJf "$OUTPUT.tar.xz" -C "$OUTPUT/.." "$BASENAME"
+echo "Compressing to tarball... DONE"
 
 
 echo "COMPLETE!"
