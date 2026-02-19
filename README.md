@@ -24,6 +24,11 @@ Total changes compared to original Nordic Cursors Theme (2.2.0):
 
 ## Installing
 
+### KDE Store
+
+Install via _"Get new…"_ dialog in _System Settings_ > _Colors & Themes_ > _Cursors_
+and search for _"Nordic Cursors Scalable"_.
+
 ### Manual
 
 Download `nordic_cursors_scalable.tar.xz` from the 
