@@ -70,6 +70,7 @@ sw-resize size_bdiag
 sb_h_double_arrow size_hor
 sb_v_double_arrow size_ver
 size_all fleur
+all-resize fleur
 split_h col-resize
 split_v row-resize
 top_left_arrow default
